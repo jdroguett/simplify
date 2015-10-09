@@ -55,11 +55,12 @@ func (m *Model) Close() error {
 // Use:
 //
 //    var users []User
-//    err = orm.Query("SELECT * FROM \"user\" order by name asc", &users)
-func (m *Model) Query(query string, models interface{}) (err error) {
+//    err = orm.Query( &users, "SELECT * FROM \"user\" order by name asc")
+func (m *Model) Query(models interface{}, query string) (err error) {
 	ind := reflect.Indirect(reflect.ValueOf(models))
 	elem := ind.Type().Elem()
 
+	Log.Println(query)
 	rows, err := m.Db.Query(query)
 	if err != nil {
 		return err
@@ -177,7 +178,7 @@ func (m *Model) Update(model interface{}) (err error) {
 //     user := User{Id: 32, Name: "jean", Email: "x@x.com", Age: 40}
 //     orm.save(&user)
 //
-// id is nil => save, id is not nil or 0 => update
+// id is nil or 0 => insert, id is not nil => update
 func (m *Model) Save(model interface{}) (err error) {
 	id := getValueId(model)
 	if id == 0 {
@@ -240,16 +241,16 @@ func (m *Model) Order(order string) *Model {
 //    var user User
 //	  err = orm.Where("email = $1", "xyz@x.com").Order("id desc").First(&user)
 func (m *Model) First(model interface{}) (err error) {
-	sql := fmt.Sprintf("select * from %v where (%v)",
+	sql := fmt.Sprintf("SELECT * FROM %v WHERE (%v)",
 		m.DBase.QuoteIdentifier(getTableName(model)),
 		m.WhereStr)
 	if m.OrderStr != "" {
-		sql = fmt.Sprintf("%v order by %v", sql, m.OrderStr)
+		sql = fmt.Sprintf("%v ORDER BY %v", sql, m.OrderStr)
 	}
 	sql += " limit 1"
 
 	m.DBase.ReplaceParamsSymbol(&sql)
-	Log.Println(sql)
+	Log.Println(sql, m.Args)
 
 	stmt, err := m.Db.Prepare(sql)
 	if err != nil {

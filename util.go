@@ -83,20 +83,22 @@ func setModel(model interface{}, columns []string, values []interface{}) {
 	mod := reflect.Indirect(reflect.ValueOf(model))
 	for i, name := range columns {
 		field := mod.FieldByName(strings.Title(name))
-		val := reflect.Indirect(reflect.ValueOf(values[i])).Interface()
+		if field.IsValid() {
+			val := reflect.Indirect(reflect.ValueOf(values[i])).Interface()
 
-		switch v := val.(type) {
-		case int64:
-			field.SetInt(v)
-		case []byte: //mysql parece que devuelve todo como []byte
-			if field.Kind() == reflect.Int {
-				n, _ := strconv.Atoi(string(v))
-				field.SetInt(int64(n))
-			} else {
-				field.SetString(string(v))
+			switch v := val.(type) {
+			case int64:
+				field.SetInt(v)
+			case []byte: //mysql parece que devuelve todo como []byte
+				if field.Kind() == reflect.Int {
+					n, _ := strconv.Atoi(string(v))
+					field.SetInt(int64(n))
+				} else {
+					field.SetString(string(v))
+				}
+			case string:
+				field.SetString(v)
 			}
-		case string:
-			field.SetString(v)
 		}
 	}
 }
