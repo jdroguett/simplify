@@ -47,7 +47,7 @@ func main() {
 	fmt.Println("user2: ", user2)
 
 	//update
-	user = User{Id: 1, Name: "Jean update", Email: "jean@update.com"}
+	user = User{Id: 1, Name: "Jean update", Email: "update@x.com"}
 	err = sim.Update(user)
 	checkErr(err)
 
