@@ -4,9 +4,9 @@ Simplifying access to data
 Drivers for Go's sql package which support database/sql
 
 Tested with:
-PostgreSQL: github.com/lib/pq
-Mysql: github.com/go-sql-driver/mysql
-SQLite3: github.com/mattn/go-sqlite3
+* PostgreSQL: github.com/lib/pq
+* Mysql: github.com/go-sql-driver/mysql
+* SQLite3: github.com/mattn/go-sqlite3
 
 
 ## Example
