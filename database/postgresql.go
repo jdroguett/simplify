@@ -2,9 +2,8 @@ package database
 
 import (
 	//"fmt"
-	"github.com/lib/pq"
 	"strconv"
-	//"strings"
+	"strings"
 )
 
 type DBPostgres struct {
@@ -26,7 +25,11 @@ func (db *DBPostgres) ReplaceParamsSymbol(sql *string) {
 }
 
 func (db *DBPostgres) QuoteIdentifier(name string) string {
-	return pq.QuoteIdentifier(name)
+	end := strings.IndexRune(name, 0)
+	if end > -1 {
+		name = name[:end]
+	}
+	return `"` + strings.Replace(name, `"`, `""`, -1) + `"`
 }
 
 func (db *DBPostgres) HasReturningId() bool {
