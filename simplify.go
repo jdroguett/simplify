@@ -137,7 +137,7 @@ func (m *Model) Insert(model interface{}) (err error) {
 	}
 
 	fieldId := ind.FieldByName(getModelId(model))
-	var v interface{} = int(id) //FIXME: ¿permitiré id con int64?
+	var v interface{} = int64(id)
 	fieldId.Set(reflect.ValueOf(v))
 	return nil
 }

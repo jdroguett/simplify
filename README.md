@@ -8,6 +8,16 @@ Tested with:
 * Mysql: github.com/go-sql-driver/mysql
 * SQLite3: github.com/mattn/go-sqlite3
 
+## Conventions
+
+Column name (DB) | Field name (struct)
+------------- | -------------
+Id  | id
+Name  | name
+CreatedAt  | created_at
+UpdatedAt  | updated_at
+Etc | etc
+
 
 ## Example
 ```go
@@ -17,13 +27,16 @@ import (
 	"fmt"
 	"github.com/jdroguett/simplify"
 	_ "github.com/lib/pq"
+	"time"
 )
 
-/* create table "user"(id serial, name varchar, email vachar); */
+/* create table "user"(id serial, name varchar, email varchar, created_at timestamp, updated_at timestamp); */
 type User struct {
-	Id    int
-	Name  string
-	Email string
+	Id        int64
+	Name      string
+	Email     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func main() {
@@ -35,7 +48,7 @@ func main() {
 	defer sim.Close()
 
 	//insert
-	user := User{Name: "Jean", Email: "x@x.com"}
+	user := User{Name: "Jean", Email: "x@x.com", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	err = sim.Insert(&user)
 	checkErr(err)
 	fmt.Println("user: ", user)
@@ -47,7 +60,7 @@ func main() {
 	fmt.Println("user2: ", user2)
 
 	//update
-	user = User{Id: 1, Name: "Jean update", Email: "update@x.com"}
+	user = User{Id: 1, Name: "Jean update", Email: "update@x.com", UpdatedAt: time.Now()}
 	err = sim.Update(user)
 	checkErr(err)
 
@@ -57,7 +70,7 @@ func main() {
 	checkErr(err)
 
 	//insert or update
-	user = User{Name: "user new", Email: "xyz@x.com"}
+	user = User{Name: "user new", Email: "xyz@x.com", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	err = sim.Save(&user)
 	checkErr(err)
 
@@ -74,4 +87,5 @@ func checkErr(err error) {
 		panic(err)
 	}
 }
+
 ```
