@@ -1,24 +1,14 @@
 package simplify
 
 import (
-	"fmt"
-	"github.com/jdroguett/simplify/database"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
-)
 
-//FIXME no se usa
-func getColumsWithoutId(dbase database.DBInter, model interface{}) (columns []string) {
-	columns = getColums(dbase, model)
-	var strSlice sort.StringSlice = columns
-	strSlice.Sort()
-	pos := sort.SearchStrings(columns, "\"id\"")
-	return append(columns[:pos], columns[pos+1:]...)
-}
+	"github.com/jdroguett/simplify/database"
+)
 
 //Return ?, ?, ?
 func getParams(numFields int) string {
@@ -37,7 +27,7 @@ func getParamsUpdate(columns []string) string {
 	return strings.Join(p, ", ")
 }
 
-func getColums(dbase database.DBInter, model interface{}) (columns []string) {
+func getColumns(dbase database.DBInter, model interface{}) (columns []string) {
 	ind := reflect.Indirect(reflect.ValueOf(model))
 	typeOfM := ind.Type()
 	for i := 0; i < ind.NumField(); i++ {
@@ -48,14 +38,17 @@ func getColums(dbase database.DBInter, model interface{}) (columns []string) {
 
 func getTableName(model interface{}) string {
 	ind := reflect.Indirect(reflect.ValueOf(model))
+	if ind.Kind() == reflect.Array || ind.Kind() == reflect.Slice {
+		return strings.ToLower(ind.Type().Elem().Name())
+	}
 	return strings.ToLower(ind.Type().Name())
 }
 
-func getModelId(model interface{}) string {
-	return "Id"
+func getModelID(model interface{}) string {
+	return "ID"
 }
 
-func getColumsAndData(dbase database.DBInter, model interface{}) (columns []string, data []interface{}) {
+func getColumnsAndData(dbase database.DBInter, model interface{}) (columns []string, data []interface{}) {
 	ind := reflect.Indirect(reflect.ValueOf(model))
 	typeOfM := ind.Type()
 	for i := 0; i < ind.NumField(); i++ {
@@ -73,19 +66,9 @@ func getColumsAndData(dbase database.DBInter, model interface{}) (columns []stri
 	return columns, data
 }
 
-func getValueId(model interface{}) (Id int64) {
+func getValueID(model interface{}) (ID int64) {
 	ind := reflect.Indirect(reflect.ValueOf(model))
-	return ind.FieldByName(getModelId(model)).Interface().(int64)
-}
-
-//no se usa
-func getData(model interface{}) {
-	ind := reflect.Indirect(reflect.ValueOf(model))
-	for i := 0; i < ind.NumField(); i++ {
-		a := ind.Field(i)
-		fmt.Println(a)
-	}
-
+	return ind.FieldByName(getModelID(model)).Interface().(int64)
 }
 
 func setModel(model interface{}, columns []string, values []interface{}) {
@@ -94,6 +77,7 @@ func setModel(model interface{}, columns []string, values []interface{}) {
 		field := mod.FieldByName(fieldName(name))
 		if field.IsValid() {
 			val := reflect.Indirect(reflect.ValueOf(values[i])).Interface()
+
 			switch v := val.(type) {
 			case int64:
 				field.SetInt(v)
@@ -103,8 +87,8 @@ func setModel(model interface{}, columns []string, values []interface{}) {
 					n, _ := strconv.Atoi(string(v))
 					field.SetInt(int64(n))
 				case reflect.Struct:
-					t, _ := time.Parse("2006-01-02 15:04:05", string(v))
-					field.Set(reflect.ValueOf(t))
+					//t, _ := time.Parse("2006-01-02 15:04:05", string(v))
+					//field.Set(reflect.ValueOf(t))
 				default:
 					field.SetString(string(v))
 				}
@@ -117,33 +101,38 @@ func setModel(model interface{}, columns []string, values []interface{}) {
 	}
 }
 
+//ID => id
 //Name => name
 //CreatedAt => created_at
-func columnName(name string) (new_name string) {
-	new_name = ""
+func columnName(name string) (newName string) {
+	newName = ""
 	for i, runeValue := range name {
 		if i > 0 && unicode.IsUpper(runeValue) {
-			new_name += "_"
+			newName += "_"
 		}
-		new_name += string(unicode.ToLower(runeValue))
+		newName += string(unicode.ToLower(runeValue))
 	}
-	return new_name
+	return newName
 }
 
+//id => ID
 //name => Name
 //created_at => CreatedAt
-func fieldName(name string) (new_name string) {
-	new_name = ""
+func fieldName(name string) string {
+	if len(name) == 2 {
+		return strings.ToUpper(name)
+	}
+	newName := ""
 	b := false
 	for i, runeValue := range name {
 		if i == 0 || b {
-			new_name += string(unicode.ToUpper(runeValue))
+			newName += string(unicode.ToUpper(runeValue))
 			b = false
 		} else if runeValue == '_' {
 			b = true
 		} else {
-			new_name += string(runeValue)
+			newName += string(runeValue)
 		}
 	}
-	return new_name
+	return newName
 }

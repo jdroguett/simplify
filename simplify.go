@@ -3,11 +3,13 @@ package simplify
 import (
 	"database/sql"
 	"fmt"
-	"github.com/jdroguett/simplify/database"
 	"reflect"
 	"strings"
+
+	"github.com/jdroguett/simplify/database"
 )
 
+// Model ---
 type Model struct {
 	Db       *sql.DB
 	DBase    database.DBInter
@@ -16,6 +18,7 @@ type Model struct {
 	OrderStr string
 }
 
+// Open connection with database
 func Open(driverName, dataSourceName string) (m *Model, err error) {
 	db, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
@@ -35,6 +38,7 @@ func Open(driverName, dataSourceName string) (m *Model, err error) {
 
 }
 
+// Close connection
 func (m *Model) Close() error {
 	err := m.Db.Close()
 	if err != nil {
@@ -43,6 +47,7 @@ func (m *Model) Close() error {
 	return nil
 }
 
+// Query SQL
 // Example struct:
 //
 // type User struct {
@@ -80,6 +85,7 @@ func (m *Model) Query(models interface{}, query string) (err error) {
 
 	for rows.Next() {
 		err = rows.Scan(values...)
+
 		if err != nil {
 			return err
 		}
@@ -90,6 +96,7 @@ func (m *Model) Query(models interface{}, query string) (err error) {
 	return nil
 }
 
+// Insert in database
 // Use:
 //
 //     user := User{Name: "jean", Email: "x@x.com", Age: 40}
@@ -99,7 +106,7 @@ func (m *Model) Query(models interface{}, query string) (err error) {
 func (m *Model) Insert(model interface{}) (err error) {
 
 	ind := reflect.Indirect(reflect.ValueOf(model))
-	columns, d := getColumsAndData(m.DBase, model)
+	columns, d := getColumnsAndData(m.DBase, model)
 	var id int64
 
 	if m.DBase.HasReturningId() {
@@ -107,7 +114,7 @@ func (m *Model) Insert(model interface{}) (err error) {
 			m.DBase.QuoteIdentifier(getTableName(model)),
 			strings.Join(columns, ", "),
 			getParams(len(columns)),
-			m.DBase.QuoteIdentifier(strings.ToLower(getModelId(model))))
+			m.DBase.QuoteIdentifier(strings.ToLower(getModelID(model))))
 		m.DBase.ReplaceParamsSymbol(&sql)
 		Log.Println(sql, d)
 		err = m.Db.QueryRow(sql, d...).Scan(&id)
@@ -136,26 +143,27 @@ func (m *Model) Insert(model interface{}) (err error) {
 		}
 	}
 
-	fieldId := ind.FieldByName(getModelId(model))
+	fieldID := ind.FieldByName(getModelID(model))
 	var v interface{} = int64(id)
-	fieldId.Set(reflect.ValueOf(v))
+	fieldID.Set(reflect.ValueOf(v))
 	return nil
 }
 
+// Update in database
 // Use:
 //
 //     user := User{Id: 32, Name: "jean", Email: "x@x.com", Age: 40}
 //     orm.Update(user)
 func (m *Model) Update(model interface{}) (err error) {
-	columns, data := getColumsAndData(m.DBase, model)
+	columns, data := getColumnsAndData(m.DBase, model)
 
 	sql := fmt.Sprintf("UPDATE %v SET %v WHERE %v=%v",
 		m.DBase.QuoteIdentifier(getTableName(model)),
 		getParamsUpdate(columns),
-		m.DBase.QuoteIdentifier(strings.ToLower(getModelId(model))),
+		m.DBase.QuoteIdentifier(strings.ToLower(getModelID(model))),
 		"?")
 
-	data = append(data, getValueId(model))
+	data = append(data, getValueID(model))
 	m.DBase.ReplaceParamsSymbol(&sql)
 	Log.Println(sql, data)
 	stmt, err := m.Db.Prepare(sql)
@@ -172,7 +180,7 @@ func (m *Model) Update(model interface{}) (err error) {
 	return nil
 }
 
-// Insert or Update
+// Save in database (Insert or Update)
 //
 // Use:
 //     user := User{Id: 32, Name: "jean", Email: "x@x.com", Age: 40}
@@ -180,7 +188,7 @@ func (m *Model) Update(model interface{}) (err error) {
 //
 // id is nil or 0 => insert, id is not nil => update
 func (m *Model) Save(model interface{}) (err error) {
-	id := getValueId(model)
+	id := getValueID(model)
 	if id == 0 {
 		err = m.Insert(model)
 		if err != nil {
@@ -195,6 +203,7 @@ func (m *Model) Save(model interface{}) (err error) {
 	return nil
 }
 
+// Delete in database
 // Use:
 //
 //     user := User{Id: 32}
@@ -203,9 +212,9 @@ func (m *Model) Delete(model interface{}) (err error) {
 	var data []interface{}
 	sql := fmt.Sprintf("DELETE FROM %v WHERE %v=%v",
 		m.DBase.QuoteIdentifier(getTableName(model)),
-		m.DBase.QuoteIdentifier(strings.ToLower(getModelId(model))),
+		m.DBase.QuoteIdentifier(strings.ToLower(getModelID(model))),
 		"?")
-	data = append(data, getValueId(model))
+	data = append(data, getValueID(model))
 	m.DBase.ReplaceParamsSymbol(&sql)
 	Log.Println(sql, data)
 	stmt, err := m.Db.Prepare(sql)
@@ -220,6 +229,7 @@ func (m *Model) Delete(model interface{}) (err error) {
 	return nil
 }
 
+// Where SQL
 // Use:
 //    var user User
 //	  err = orm.Where("email = $1", "xyz@x.com").Order("id desc").First(&user)
@@ -229,6 +239,7 @@ func (m *Model) Where(where string, args ...interface{}) *Model {
 	return m
 }
 
+// Order SQL
 // Use:
 //    var user User
 //	  err = orm.Where("email = $1", "xyz@x.com").Order("id desc").First(&user)
@@ -237,6 +248,63 @@ func (m *Model) Order(order string) *Model {
 	return m
 }
 
+// All elements
+// Use:
+//    var users []User
+//    err = orm.All(&users)
+//	  err = orm.Where("email = $1", "xyz@x.com").Order("id desc").All(&user)
+func (m *Model) All(models interface{}) (err error) {
+	ind := reflect.Indirect(reflect.ValueOf(models))
+	elem := ind.Type().Elem()
+
+	sql := fmt.Sprintf("SELECT * FROM %v", m.DBase.QuoteIdentifier(getTableName(models)))
+	if m.WhereStr != "" {
+		sql = fmt.Sprintf("%v WHERE (%v)", sql, m.WhereStr)
+	}
+	if m.OrderStr != "" {
+		sql = fmt.Sprintf("%v ORDER BY %v", sql, m.OrderStr)
+	}
+
+	m.DBase.ReplaceParamsSymbol(&sql)
+	Log.Println(sql, m.Args)
+
+	stmt, err := m.Db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Query(m.Args...)
+
+	if err != nil {
+		return err
+	}
+
+	columns, err := res.Columns()
+	if err != nil {
+		return err
+	}
+	defer res.Close()
+
+	values := make([]interface{}, len(columns))
+	for i := range values {
+		var val interface{}
+		values[i] = &val
+	}
+
+	for res.Next() {
+		err = res.Scan(values...)
+		if err != nil {
+			return err
+		}
+		model := reflect.New(elem)
+		setModel(model.Interface(), columns, values)
+		ind.Set(reflect.Append(ind, reflect.Indirect(model)))
+	}
+	return nil
+}
+
+// First element
 // Use:
 //    var user User
 //	  err = orm.Where("email = $1", "xyz@x.com").Order("id desc").First(&user)
